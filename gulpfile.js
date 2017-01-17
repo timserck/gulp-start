@@ -13,6 +13,7 @@ var image = require('gulp-image');
 var browserSync = require('browser-sync');
 var reload = browserSync.reload;
 var babel = require('gulp-babel');
+var newer  = require('gulp-newer');
 
 var browserify = require('browserify');
 var babelify = require('babelify');
@@ -20,6 +21,13 @@ var source = require('vinyl-source-stream');
 var buffer = require('vinyl-buffer');
 
 
+
+
+const SASS_INCLUDE_PATHS = [
+  '/node_modules/node-normalize-scss/',
+  '/node_modules/bourbon/app/assets/stylesheets/',
+ '/node_modules/bourbon-neat/app/assets/stylesheets/',
+];
 // Lint Task
 gulp.task('lint', function() {
     return gulp.src('src/js/*.js')
@@ -47,8 +55,10 @@ gulp.task('sass', function() {
             style: 'expanded',
             includePaths: [
             require('node-bourbon').includePaths, 
+            require('bourbon-neat').includePaths,
             require('node-normalize-scss').includePaths
             ]
+      
         }))
         .pipe(gulp.dest('dist/css'))
         .pipe(rename({
@@ -59,6 +69,20 @@ gulp.task('sass', function() {
 });
 
 
+// Copy react.js and react-dom.js to assets/js/src/vendor
+// only if the copy in node_modules is "newer"
+gulp.task('copy-react', function() {
+  return gulp.src('node_modules/react/dist/react.js')
+    .pipe(newer('./src/js/vendor/react.js'))
+    .pipe(gulp.dest('./src/js/vendor/'));
+});
+
+gulp.task('copy-react-dom', function() {
+  return gulp.src('node_modules/react-dom/dist/react-dom.js')
+    .pipe(newer('./src/js/vendor/react-dom.js'))
+    .pipe(gulp.dest('./src/js/vendor/'));
+});
+
 
 gulp.task('browserify', function() {
   return browserify({
@@ -67,7 +91,7 @@ gulp.task('browserify', function() {
       cache: {},
       packageCache: {},
       fullPaths: true,
-      entries: './src/js/main.js',
+      entries: './src/js/index.jsx',
     })
     .transform(babelify.configure({ 
         presets: ['es2015', 'stage-2', 'react'],
@@ -99,7 +123,7 @@ browserSync.init({
 // Watch Files For Changes
 gulp.task('watch', function() {
 	gulp.watch('dist/**/*.php', [reload]);
-    gulp.watch('src/js/*.js', ['lint', 'browserify', reload]);
+    gulp.watch('src/js/*.{js,jsx}', [ 'lint', 'browserify', reload]);
     gulp.watch('src/scss/*.scss', ['sass', reload]);
     gulp.watch('src/imgs/**/**', ['image', reload]);
 
@@ -112,4 +136,9 @@ gulp.task('watch', function() {
 
 // Default Task
 gulp.task('default', [ 'browserify','lint', 'sass', 'image', 'browsersync', 'watch']);
+// Default react
+gulp.task('react', [ 'copy-react','copy-react-dom', 'browserify','lint', 'sass', 'image', 'browsersync', 'watch']);
+
+
+
 
